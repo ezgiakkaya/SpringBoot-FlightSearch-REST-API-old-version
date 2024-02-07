@@ -62,8 +62,24 @@ public class FlightController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Optional<LocalDateTime> returnDate) {
 
+        System.out.println("new request : " + departure + " " + arrival + " " + departureDate);
         List<List<Flight>> flights = flightService.findFlights(departure, arrival, departureDate,
                 returnDate.orElse(null));
+        return ResponseEntity.ok(flights);
+    }
+
+    // Search flights with complex criteria (departure, arrival, and optional dates
+    // for departure and return)
+    @GetMapping("/more-search")
+    public ResponseEntity<List<List<Flight>>> moreAdvancedSearchFlights(
+            @RequestParam String departure,
+            @RequestParam String arrival,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime departureDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Optional<LocalDateTime> returnDate) {
+
+        System.out.println("new request : " + departure + " " + arrival + " " + departureDate);
+        // Pass returnDate directly as an Optional
+        List<List<Flight>> flights = flightService.findAdvancedFlights(departure, arrival, departureDate, returnDate);
         return ResponseEntity.ok(flights);
     }
 

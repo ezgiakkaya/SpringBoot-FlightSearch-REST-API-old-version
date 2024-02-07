@@ -4,6 +4,9 @@ import com.example.flightsearchapi.model.Airport;
 import com.example.flightsearchapi.model.Flight;
 import com.example.flightsearchapi.repository.FlightRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -53,18 +56,47 @@ public class FlightService {
 
     public List<List<Flight>> findFlights(String departure, String arrival, LocalDateTime departureDate,
             LocalDateTime returnDate) {
-        List<Flight> outboundFlights = flightRepository.findByDepartureAirportAndArrivalAirportAndDepartureTimeBetween(
-                departure, arrival, departureDate, departureDate.plusDays(1)); // Assuming full-day search
-
         List<List<Flight>> result = new ArrayList<>();
-        result.add(outboundFlights); // Always include outbound flights
 
-        if (returnDate != null) {
+        System.out.println(departure + " " + arrival + " " + departureDate + " " + returnDate);
+        List<Flight> outboundFlights = flightRepository
+                .findByDepartureAirportAndArrivalAirportAndDepartureTimeBetween(
+                        departure, arrival, departureDate, returnDate); // Assuming full-day search
+        result.add(outboundFlights); // Always include outbound flights
+        return result;
+    }
+
+    public List<List<Flight>> findAdvancedFlights(String departure, String arrival, LocalDateTime departureDate,
+            Optional<LocalDateTime> returnDateOpt) {
+        List<List<Flight>> result = new ArrayList<>();
+
+        // Calculate start and end of the departure day
+        LocalDateTime startOfDepartureDay = departureDate.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDepartureDay = departureDate.toLocalDate().atTime(23, 59, 59);
+
+        // Find outbound flights departing on the specified departure date
+        List<Flight> outboundFlights = flightRepository.findByDepartureAirportAndArrivalAirportAndDepartureTimeBetween(
+                departure, arrival, startOfDepartureDay, endOfDepartureDay);
+        result.add(outboundFlights);
+
+        // If a return date is provided, find return flights on the return date
+        returnDateOpt.ifPresent(returnDate -> {
+            // Calculate start and end of the return day
+            LocalDateTime startOfReturnDay = returnDate.toLocalDate().atStartOfDay();
+            LocalDateTime endOfReturnDay = returnDate.toLocalDate().atTime(23, 59, 59);
+
+            // Find return flights departing from 'arrival' to 'departure' on the return
+            // date
             List<Flight> returnFlights = flightRepository
                     .findByDepartureAirportAndArrivalAirportAndDepartureTimeBetween(
-                            arrival, departure, returnDate, returnDate.plusDays(1)); // Assuming full-day search
-            result.add(returnFlights); // Include return flights if return date is provided
-        }
+                            arrival, departure, startOfReturnDay, endOfReturnDay);
+
+            // Optionally, to ensure clear separation, you may want to keep return flights
+            // in a separate list
+            // This depends on how you want to structure the data (e.g., one list for
+            // outbound and one for return flights)
+            result.add(returnFlights);
+        });
 
         return result;
     }
